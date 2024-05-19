@@ -80,7 +80,7 @@ async def get_prediction():
     return {'prediction': prediction}
 
 
-@app.post("/update_length/{username}", response_model=str)
+@app.get("/update_length/{username}", response_model=str)
 def update_length(username: str, db: DBSessionDep):
     try:
         user = db.execute(select(PenisData).filter(PenisData.username == username)).scalar()
