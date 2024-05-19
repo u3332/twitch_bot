@@ -10,7 +10,7 @@ from fastapi import FastAPI, __version__, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
 from sqlalchemy.future import select
-from sqlalchemy import SQLAlchemyError
+from sqlalchemy.exc import SQLAlchemyError
 
 from model import PenisData
 from predictions_list import predictions
@@ -95,9 +95,11 @@ def update_points(username: str, db: DBSessionDep):
 
         now = datetime.utcnow()
         if user.last_updated and (now - user.last_updated) < timedelta(hours=24):
-            remaining_time = now - user.last_updated
-            db.rollback()
-            raise HTTPException(status_code=403, detail=f"Ти маєш шанс збільшити свій член тільки 1 раз в 24 години, почекай ще {remaining_time}.")
+            remaining_time = timedelta(hours=24) - (now - user.last_updated)
+            hours, remainder = divmod(remaining_time.seconds, 3600)
+            minutes, seconds = divmod(remainder, 60)
+            db.rollback()  # Explained below
+            return f"Ти маєш шанс збільшити свій член тільки 1 раз в 24 години, почекай ще {hours} годин, {minutes} хвилин, {seconds} секунд."
 
         change = round(random.uniform(-10, 10), 2)
         user.length += change
@@ -125,7 +127,7 @@ def get_points(username: str, db: DBSessionDep):
         user = db.execute(select(PenisData).filter(PenisData.username == username)).scalar()
         if not user:
             raise HTTPException(status_code=404, detail="Користувача не знайдено")
-        return f"'{username}', довжина твого члена - {user.length:.2f} см."
+        return f"{username}, довжина твого члена: {user.length:.2f} см."
     except Exception as e:
         logging.error(f"Unexpected error: {str(e)}", exc_info=True)
         return "Неочікувана помилка, вибачай!"
