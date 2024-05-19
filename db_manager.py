@@ -17,9 +17,12 @@ class DatabaseSessionManager:
         if engine_kwargs is None:
             engine_kwargs = {}
 
-        # Ensuring that the engine is always configured with the echo parameter
-        # for debugging, which can be turned off by default or based on the environment.
-        engine_kwargs.setdefault('echo', True)
+        # Default engine configuration with debugging and pooling options
+        engine_kwargs.setdefault('echo', True)  # For SQL debugging
+        engine_kwargs.setdefault('pool_size', 10)  # The number of connections to keep open inside the connection pool
+        engine_kwargs.setdefault('max_overflow', 10)  # The number of connections to allow in excess of `pool_size`
+        engine_kwargs.setdefault('pool_timeout', 30)  # Seconds to wait before giving up on returning a connection
+        engine_kwargs.setdefault('pool_recycle', -1)  # Reuse connections older than this number of seconds
 
         self.engine = create_async_engine(database_url, **engine_kwargs)
         self.SessionLocal = async_sessionmaker(
@@ -30,7 +33,6 @@ class DatabaseSessionManager:
         )
 
     async def close(self):
-        # Safeguard to check if the engine was already closed
         if self.engine is None:
             return
         await self.engine.dispose()
@@ -39,7 +41,6 @@ class DatabaseSessionManager:
 
     @contextlib.asynccontextmanager
     async def session(self) -> AsyncIterator[AsyncSession]:
-        # Check if session maker exists
         if self.SessionLocal is None:
             raise Exception("Session maker is not initialized")
 
