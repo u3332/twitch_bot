@@ -28,7 +28,7 @@ async def lifespan(app: FastAPI):
         await session_manager.close()
 
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(lifespan=lifespan, debug=True)
 
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
