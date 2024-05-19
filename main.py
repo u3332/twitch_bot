@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from contextlib import asynccontextmanager
 
 
-from fastapi import FastAPI, __version__, HTTPException
+from fastapi import FastAPI, __version__, HTTPException, Response, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
 from sqlalchemy.future import select
@@ -98,3 +98,15 @@ async def get_points(username: str, db: DBSessionDep):
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return user
+
+@app.exception_handler(Exception)
+async def debug_exception_handler(request: Request, exc: Exception):
+    import traceback
+
+    return Response(
+        content="".join(
+            traceback.format_exception(
+                etype=type(exc), value=exc, tb=exc.__traceback__
+            )
+        )
+    )
