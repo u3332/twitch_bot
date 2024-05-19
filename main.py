@@ -27,7 +27,7 @@ async def lifespan(app: FastAPI):
     yield
     if session_manager.engine is not None:
         # Close the DB connection
-        await session_manager.close()
+        session_manager.close()
 
 
 app = FastAPI(lifespan=lifespan, debug=True)
@@ -81,37 +81,36 @@ async def get_prediction():
 
 
 @app.post("/update_points/{username}", response_model=PenisDataResponse)
-async def update_points(username: str, db: DBSessionDep):
-    async with db.begin():
-        user = (await db.execute(select(PenisData).filter(PenisData.username == username))).scalar()
+def update_points(username: str, db: DBSessionDep):
+    user = db.execute(select(PenisData).filter(PenisData.username == username)).scalar()
 
-        if not user:
-            user = PenisData(username=username, length=random.choice([-10, -5, 0, 5, 10]))
-            db.add(user)
-            return user  # This user will be committed and refreshed automatically at the end of the transaction block
+    if not user:
+        user = PenisData(username=username, length=random.choice([-10, -5, 0, 5, 10]))
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        return user
 
-        now = datetime.utcnow()
-        if user.last_updated and (now - user.last_updated) < timedelta(hours=24):
-            remaining_time = (now - user.last_updated)
-            raise HTTPException(status_code=403, detail=f"You can only update points once every 24 hours. Please wait {remaining_time}.")
+    now = datetime.utcnow()
+    if user.last_updated and (now - user.last_updated) < timedelta(hours=24):
+        remaining_time = (now - user.last_updated)
+        db.rollback()  # Roll back any changes if they were made
+        raise HTTPException(status_code=403, detail=f"You can only update points once every 24 hours. Please wait {remaining_time}.")
 
-        change = random.choice([-10, -5, 0, 5, 10])
-        user.length += change
-        user.last_updated = now
-
-    # User object will be automatically committed and refreshed here
+    change = random.choice([-10, -5, 0, 5, 10])
+    user.length += change
+    user.last_updated = now
+    db.commit()
+    db.refresh(user)
     return user
 
+
 @app.get("/points/{username}", response_model=PenisDataResponse)
-async def get_points(username: str, db: DBSessionDep):
-    try:
-        user = (await db.execute(select(PenisData).filter(PenisData.username == username))).scalar()
-        if not user:
-            raise HTTPException(status_code=404, detail="User not found")
-        return user
-    except Exception as e:
-        logging.error("Failed to get points: %s", str(e))
-        raise HTTPException(status_code=500, detail="Internal Server Error")
+def get_points(username: str, db: DBSessionDep):
+    user = db.execute(select(PenisData).filter(PenisData.username == username)).scalar()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
 
 @app.exception_handler(Exception)
 async def debug_exception_handler(request: Request, exc: Exception):

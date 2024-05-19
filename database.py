@@ -2,6 +2,7 @@ from typing import Annotated
 
 from db_manager import get_db_session
 from fastapi import Depends
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Session
 
-DBSessionDep = Annotated[AsyncSession, Depends(get_db_session)]
+# Using Depends to inject a database session into each endpoint
+DBSessionDep = Annotated[Session, Depends(get_db_session)]

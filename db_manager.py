@@ -1,12 +1,8 @@
 import contextlib
-from typing import Any, AsyncIterator
+from typing import Any, Iterator
 
-from sqlalchemy.ext.asyncio import (
-    AsyncSession,
-    async_sessionmaker,
-    create_async_engine,
-)
-from sqlalchemy.orm import declarative_base
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, declarative_base, Session
 from db_config import Config
 
 Base = declarative_base()
@@ -17,48 +13,46 @@ class DatabaseSessionManager:
         if engine_kwargs is None:
             engine_kwargs = {}
 
-        # Default engine configuration with debugging and pooling options
-        engine_kwargs.setdefault('echo', True)  # For SQL debugging
-        engine_kwargs.setdefault('pool_size', 10)  # The number of connections to keep open inside the connection pool
-        engine_kwargs.setdefault('max_overflow', 10)  # The number of connections to allow in excess of `pool_size`
-        engine_kwargs.setdefault('pool_timeout', 30)  # Seconds to wait before giving up on returning a connection
-        engine_kwargs.setdefault('pool_recycle', -1)  # Reuse connections older than this number of seconds
+        engine_kwargs.setdefault('echo', True)
+        engine_kwargs.setdefault('pool_size', 10)
+        engine_kwargs.setdefault('max_overflow', 10)
+        engine_kwargs.setdefault('pool_timeout', 30)
+        engine_kwargs.setdefault('pool_recycle', 1800)  # Consider a positive recycle time
 
-        self.engine = create_async_engine(database_url, **engine_kwargs)
-        self.SessionLocal = async_sessionmaker(
+        self.engine = create_engine(database_url, **engine_kwargs)
+        self.SessionLocal = sessionmaker(
             autocommit=False,
             autoflush=False,
-            bind=self.engine,
-            class_=AsyncSession
+            bind=self.engine
         )
 
-    async def close(self):
+    def close(self):
         if self.engine is None:
             return
-        await self.engine.dispose()
+        self.engine.dispose()
         self.engine = None
         self.SessionLocal = None
 
-    @contextlib.asynccontextmanager
-    async def session(self) -> AsyncIterator[AsyncSession]:
+    @contextlib.contextmanager
+    def session(self) -> Iterator[Session]:
         if self.SessionLocal is None:
             raise Exception("Session maker is not initialized")
 
-        async_session = self.SessionLocal()
+        session = self.SessionLocal()
         try:
-            yield async_session
-            await async_session.commit()
+            yield session
+            session.commit()
         except Exception as e:
-            await async_session.rollback()
+            session.rollback()
             raise e
         finally:
-            await async_session.close()
+            session.close()
 
 
 # Instance of the session manager
 session_manager = DatabaseSessionManager(Config.SQLALCHEMY_DATABASE_URL)
 
 
-async def get_db_session():
-    async with session_manager.session() as session:
+def get_db_session():
+    with session_manager.session() as session:
         yield session
