@@ -8,7 +8,6 @@ from fastapi.responses import HTMLResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
-
 from schema import PenisDataResponse
 from session import create_get_session, init_db
 from model import PenisData
@@ -38,6 +37,7 @@ html = f"""
 </html>
 """
 
+
 @app.on_event("startup")
 async def on_startup():
     await init_db()
@@ -61,35 +61,35 @@ async def get_prediction():
 
 @app.post("/update_points/{username}", response_model=PenisDataResponse)
 async def update_points(username: str, db: AsyncSession = Depends(create_get_session)):
-    async with db.begin():
-        result = await db.execute(select(PenisData).filter(PenisData.username == username))
-        user = result.scalars().first()
+    result = await db.execute(select(PenisData).filter(PenisData.username == username))
+    user = result.scalars().first()
 
-        if not user:
-            user = PenisData(username=username, length=random.choice([-10, -5, 0, 5, 10]))
-            db.add(user)
-            await db.commit()
-            await db.refresh(user)
-            return user
-
-        now = datetime.utcnow()
-        if user.last_updated and (now - user.last_updated) < timedelta(hours=24):
-            remaining_time = timedelta(hours=24) - (now - user.last_updated)
-            raise HTTPException(status_code=403, detail=f"You can only update points once every 24 hours. Please wait {remaining_time}.")
-
-        change = random.choice([-10, -5, 0, 5, 10])
-        user.length += change
-        user.last_updated = now
-
+    if not user:
+        user = PenisData(username=username, length=random.choice([-10, -5, 0, 5, 10]))
+        db.add(user)
         await db.commit()
         await db.refresh(user)
         return user
 
+    now = datetime.utcnow()
+    if user.last_updated and (now - user.last_updated) < timedelta(hours=24):
+        remaining_time = timedelta(hours=24) - (now - user.last_updated)
+        raise HTTPException(status_code=403,
+                            detail=f"You can only update points once every 24 hours. Please wait {remaining_time}.")
+
+    change = random.choice([-10, -5, 0, 5, 10])
+    user.length += change
+    user.last_updated = now
+
+    await db.commit()
+    await db.refresh(user)
+    return user
+
+
 @app.get("/points/{username}", response_model=PenisDataResponse)
 async def get_points(username: str, db: AsyncSession = Depends(create_get_session)):
-    async with db.begin():
-        result = await db.execute(select(PenisData).filter(PenisData.username == username))
-        user = result.scalars().first()
-        if not user:
-            raise HTTPException(status_code=404, detail="User not found")
-        return user
+    result = await db.execute(select(PenisData).filter(PenisData.username == username))
+    user = result.scalars().first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
