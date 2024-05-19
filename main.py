@@ -2,6 +2,7 @@ from time import time
 import random
 from datetime import datetime, timedelta
 from contextlib import asynccontextmanager
+import logging
 
 
 from fastapi.middleware.cors import CORSMiddleware
@@ -103,10 +104,15 @@ async def update_points(username: str, db: DBSessionDep):
 
 @app.get("/points/{username}", response_model=PenisDataResponse)
 async def get_points(username: str, db: DBSessionDep):
-    user = (await db.execute(select(PenisData).filter(PenisData.username == username))).scalar()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    return user
+    try:
+        async with db.begin():
+            user = (await db.execute(select(PenisData).filter(PenisData.username == username))).scalar()
+            if not user:
+                raise HTTPException(status_code=404, detail="User not found")
+            return user
+    except Exception as e:
+        logging.error("Failed to get points: %s", str(e))
+        raise HTTPException(status_code=500, detail="Internal Server Error")
 
 @app.exception_handler(Exception)
 async def debug_exception_handler(request: Request, exc: Exception):
