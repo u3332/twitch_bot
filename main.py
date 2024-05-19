@@ -1,19 +1,35 @@
 from time import time
 import random
 from datetime import datetime, timedelta
+from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, __version__, Depends, HTTPException
+
+from fastapi import FastAPI, __version__, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
 from schema import PenisDataResponse
-from session import create_get_session, init_db
 from model import PenisData
 from predictions_list import predictions
+from db_manager import sessionmanager
+from database import DBSessionDep
 
-app = FastAPI()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    Function that handles startup and shutdown events.
+    To understand more, read https://fastapi.tiangolo.com/advanced/events/
+    """
+    yield
+    if sessionmanager._engine is not None:
+        # Close the DB connection
+        await sessionmanager.close()
+
+
+app = FastAPI(lifespan=lifespan)
+
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
@@ -38,11 +54,6 @@ html = f"""
 """
 
 
-@app.on_event("startup")
-async def on_startup():
-    await init_db()
-
-
 @app.get("/")
 async def root():
     return HTMLResponse(html)
@@ -60,7 +71,7 @@ async def get_prediction():
 
 
 @app.post("/update_points/{username}", response_model=PenisDataResponse)
-async def update_points(username: str, db: AsyncSession = Depends(create_get_session)):
+async def update_points(username: str, db: DBSessionDep):
     result = await db.execute(select(PenisData).filter(PenisData.username == username))
     user = result.scalars().first()
 
@@ -87,7 +98,7 @@ async def update_points(username: str, db: AsyncSession = Depends(create_get_ses
 
 
 @app.get("/points/{username}", response_model=PenisDataResponse)
-async def get_points(username: str, db: AsyncSession = Depends(create_get_session)):
+async def get_points(username: str, db: DBSessionDep):
     result = await db.execute(select(PenisData).filter(PenisData.username == username))
     user = result.scalars().first()
     if not user:
