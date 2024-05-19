@@ -86,17 +86,18 @@ def update_length(username: str, db: DBSessionDep):
         user = db.execute(select(PenisData).filter(PenisData.username == username)).scalar()
         penis_prefix = random.choice(['піструн', 'шланг', 'член', 'удав', 'прутень', 'вялий', 'стержень', 'стрижень', 'ствол', 'блохастий', 'волохатий', 'лисий'])
 
-
         if not user:
             new_length = random.randint(-10, 10)
             user = PenisData(username=username, length=new_length)
             db.add(user)
             db.commit()
             db.refresh(user)
-            return f"{username}, у тебе з'явився {penis_prefix}, і його довжина - {new_length} см."
+            return f"{username}, у тебе з'явився {penis_prefix}, і його довжина: {new_length} см."
 
         now = datetime.utcnow()
-        if user.last_updated and (now - user.last_updated) < timedelta(hours=10):
+        if (username not in ['onenBoy', 'ruslanyeremichuk']
+                and user.last_updated
+                and (now - user.last_updated) < timedelta(hours=10)):
             return f"Лінійка зламалася, перевіриш завтра! Наразі в тебе: {user.length} см"
 
         change = random.randint(-10, 10)
