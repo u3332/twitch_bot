@@ -105,11 +105,10 @@ async def update_points(username: str, db: DBSessionDep):
 @app.get("/points/{username}", response_model=PenisDataResponse)
 async def get_points(username: str, db: DBSessionDep):
     try:
-        async with db.begin():
-            user = (await db.execute(select(PenisData).filter(PenisData.username == username))).scalar()
-            if not user:
-                raise HTTPException(status_code=404, detail="User not found")
-            return user
+        user = (await db.execute(select(PenisData).filter(PenisData.username == username))).scalar()
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        return user
     except Exception as e:
         logging.error("Failed to get points: %s", str(e))
         raise HTTPException(status_code=500, detail="Internal Server Error")
