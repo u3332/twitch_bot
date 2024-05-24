@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from contextlib import asynccontextmanager
 
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi import FastAPI, __version__, Request
+from fastapi import FastAPI, __version__, Request, HTTPException
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.future import select
@@ -31,12 +31,16 @@ async def lifespan(app: FastAPI):
         .order_by(PenisData.length.desc())
         .limit(5)
     ).all()
+
+    if len(initial_top5) < 5:
+        raise HTTPException(status_code=500, detail="Insufficient data to populate top 5")
+
     user_cache.top5 = [{'username': user.username, 'length': user.length} for user in initial_top5]
+
     yield
     if session_manager.engine is not None:
         # Close the DB connection
         session_manager.close()
-
 
 user_cache = UserCache()
 app = FastAPI(lifespan=lifespan, debug=True)
@@ -133,10 +137,9 @@ async def get_top5():
     Endpoint to retrieve the top 5 users based on length.
     Returns a formatted string with each username and their length.
     """
-    top5_users = user_cache.top5
-    if not top5_users:
+    if not user_cache.top5:
         return "No top users available."
 
     # Format the list into a single string
-    result = "ТОП 5 ХУЯК:\n" + "\n".join(f"{user['username']} - {user['length']} см" for user in top5_users)
+    result = "ТОП 5 ХУЯК:\n" + "\n".join(f"{user['username']} - {user['length']} см" for user in user_cache.top5)
     return result
