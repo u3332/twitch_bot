@@ -16,7 +16,6 @@ from predictions_list import predictions
 from db_manager import session_manager
 from database import DBSessionDep
 from user_cache import UserCache
-from db_manager import get_db_session
 
 
 @asynccontextmanager
@@ -25,18 +24,6 @@ async def lifespan(app: FastAPI):
     Function that handles startup and shutdown events.
     To understand more, read https://fastapi.tiangolo.com/advanced/events/
     """
-    db = next(get_db_session())
-    initial_top5 = db.execute(
-        select(PenisData.username, PenisData.length)
-        .order_by(PenisData.length.desc())
-        .limit(5)
-    ).all()
-
-    if len(initial_top5) < 5:
-        raise HTTPException(status_code=500, detail="Insufficient data to populate top 5")
-
-    user_cache.top5 = [{'username': user.username, 'length': user.length} for user in initial_top5]
-
     yield
     if session_manager.engine is not None:
         # Close the DB connection

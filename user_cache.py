@@ -1,12 +1,25 @@
 from datetime import datetime, timedelta
 
+from db_manager import get_db_session
+from sqlalchemy.future import select
+from model import PenisData
+
 
 class UserCache:
     def __init__(self, expiry_duration=timedelta(hours=10)):
         self.cache = {}
         self.expiry_duration = expiry_duration
         self.top5 = []
+        self.init_top()
 
+    def init_top(self, db=next(get_db_session())):
+        initial_top5 = db.execute(
+            select(PenisData.username, PenisData.length)
+            .order_by(PenisData.length.desc())
+            .limit(5)
+        ).all()
+
+        self.top5 = [{'username': user.username, 'length': user.length} for user in initial_top5]
 
     def get(self, username: str):
         now = datetime.utcnow()
