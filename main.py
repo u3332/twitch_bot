@@ -128,5 +128,5 @@ async def get_top5():
         return "No top users available."
 
     # Format the list into a single string
-    result = "ТОП 5 ХУЯК:\n" + "\n".join(f"{user['username']} - {user['length']} см" for user in user_cache.top5)
+    result = "ТОП 5 ХУЯК: " + "; ".join(f"{user['username']} - {user['length']} см" for user in user_cache.top5)
     return result
