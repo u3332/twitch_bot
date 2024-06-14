@@ -12,7 +12,7 @@ from sqlalchemy.future import select
 from sqlalchemy.exc import SQLAlchemyError
 
 from model import PenisData
-from predictions_list import predictions
+from predictions_list import predictions, user_prediction
 from db_manager import session_manager
 from database import DBSessionDep
 from user_cache import UserCache
@@ -56,10 +56,16 @@ async def hello():
     return {'res': 'pong', 'version': __version__, "time": time()}
 
 
-@app.get("/prediction/{username}", response_model=str)
-async def get_prediction(username: str):
-    print('username', username)
-    prediction = random.choice(predictions)
+@app.get("/prediction/{caller}/{callee}", response_model=str)
+async def get_prediction(caller: str, callee: str):
+    print('Caller:', caller)
+    print('Callee:', callee)
+    if caller == callee:
+        # Same person is calling
+        prediction = random.choice(predictions)
+    else:
+        # Different person is calling
+        prediction = random.choice(user_prediction).format(username=callee)
     return prediction
 
 
