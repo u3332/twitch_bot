@@ -4,8 +4,7 @@ import random
 from datetime import datetime, timedelta
 from contextlib import asynccontextmanager
 from urllib.parse import unquote
-import unidecode
-
+from unidecode import unidecode
 
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI, __version__, Request, HTTPException
@@ -32,6 +31,7 @@ async def lifespan(app: FastAPI):
         # Close the DB connection
         session_manager.close()
 
+
 user_cache = UserCache()
 app = FastAPI(lifespan=lifespan, debug=True)
 app.add_middleware(
@@ -43,6 +43,9 @@ app.add_middleware(
 )
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
+
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 
 @app.get("/")
@@ -61,28 +64,35 @@ async def hello():
 
 @app.get("/prediction", response_model=str)
 async def get_prediction(user: str, touser: str):
-    # Process user and touser
-    caller = unidecode.unidecode(user).strip()
-    callee = unidecode.unidecode(unquote(touser)).strip()
+    logger.info('Raw user: %s', user)
+    logger.info('Raw touser: %s', touser)
 
-    print('[1] Caller:', caller)
-    print('[1] Callee:', callee)
+    # Process user and touser
+    caller = unidecode(user).strip()
+    callee = unidecode(unquote(touser)).strip()
+
+    logger.info('Processed caller: %s', caller)
+    logger.info('Processed callee: %s', callee)
 
     # Validate callee
-    if not callee.isprintable() or not callee.strip() or callee.lower() == 'null' or callee == ' ':
+    if not callee or not callee.isprintable() or callee.lower() == 'null' or callee.isspace():
+        logger.info('Invalid callee detected, setting callee to caller')
         callee = caller
 
-    print('[2] Caller:', caller)
-    print('[2] Callee:', callee)
+    logger.info('Final caller: %s', caller)
+    logger.info('Final callee: %s', callee)
 
     if caller == callee:
         # Same person is calling
         prediction = random.choice(predictions)
+        logger.info('Prediction for same caller and callee: %s', prediction)
     else:
         # Different person is calling
         prediction = random.choice(user_prediction).format(username=callee)
+        logger.info('Prediction for different caller and callee: %s', prediction)
 
     return prediction
+
 
 @app.get("/update_length/{username}", response_model=str)
 def update_length(username: str, db: DBSessionDep):
