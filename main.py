@@ -66,7 +66,7 @@ async def hello():
 @app.get("/prediction", response_model=str)
 async def get_prediction(user: str, touser: str):
     user, touser = user.strip(), touser.strip()
-    if not touser or touser == '':
+    if not touser or touser == '' or touser.isspace():
         touser = user
 
     if user == touser:
