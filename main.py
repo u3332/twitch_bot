@@ -3,6 +3,9 @@ from time import time
 import random
 from datetime import datetime, timedelta
 from contextlib import asynccontextmanager
+from urllib.parse import unquote
+from typing import Optional
+
 
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI, __version__, Request, HTTPException
@@ -56,16 +59,26 @@ async def hello():
     return {'res': 'pong', 'version': __version__, "time": time()}
 
 
+@app.get("/prediction/{caller}/", response_model=str)
 @app.get("/prediction/{caller}/{callee}", response_model=str)
-async def get_prediction(caller: str, callee: str):
-    print('Caller:', caller)
-    print('Callee:', callee)
-    if caller == callee:
+async def get_prediction(caller: str, callee: Optional[str] = None):
+    # Decode URL-encoded input if callee is provided
+    if callee:
+        decoded_callee = unquote(callee)
+    else:
+        decoded_callee = caller
+
+    # Validate callee
+    if not decoded_callee.isprintable() or not decoded_callee.strip() or decoded_callee.lower() == 'null' or decoded_callee == ' ':
+        decoded_callee = caller
+
+    if caller == decoded_callee:
         # Same person is calling
         prediction = random.choice(predictions)
     else:
         # Different person is calling
-        prediction = random.choice(user_prediction).format(username=callee)
+        prediction = random.choice(user_prediction).format(username=decoded_callee)
+
     return prediction
 
 
