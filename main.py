@@ -56,11 +56,11 @@ async def hello():
     return {'res': 'pong', 'version': __version__, "time": time()}
 
 
-@app.get("/prediction/{username}", response_model=dict)
-async def get_prediction(username: str = None):
+@app.get("/prediction/{username}", response_model=str)
+async def get_prediction(username: str):
     print('username', username)
     prediction = random.choice(predictions)
-    return {'prediction': prediction}
+    return prediction
 
 
 @app.get("/update_length/{username}", response_model=str)
