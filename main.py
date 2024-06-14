@@ -62,37 +62,20 @@ async def hello():
     return {'res': 'pong', 'version': __version__, "time": time()}
 
 
+
 @app.get("/prediction", response_model=str)
 async def get_prediction(user: str, touser: str):
-    logger.info('Raw user: %s', user)
-    logger.info('Raw touser: %s', touser)
+    user, touser = user.strip(), touser.strip()
+    if not touser or touser == '':
+        touser = user
 
-    # Process user and touser to be ASCII only
-    caller = unidecode(user).strip()
-    callee = unidecode(unquote(touser)).strip()
-
-    logger.info('Processed caller: %s', caller)
-    logger.info('Processed callee: %s', callee)
-
-    # Validate callee with ASCII check
-    if (not callee or
-        not callee.isprintable() or
-        callee.lower() == 'null' or
-        callee.isspace() or
-        not all(ord(char) < 128 for char in callee)):
-        logger.info('Invalid callee detected (non-ASCII or empty), setting callee to caller')
-        callee = caller
-
-    logger.info('Final caller: %s', caller)
-    logger.info('Final callee: %s', callee)
-
-    if caller == callee:
+    if user == touser:
         # Same person is calling
         prediction = random.choice(predictions)
         logger.info('Prediction for same caller and callee: %s', prediction)
     else:
         # Different person is calling
-        prediction = random.choice(user_prediction).format(username=callee)
+        prediction = random.choice(user_prediction).format(username=touser)
         logger.info('Prediction for different caller and callee: %s', prediction)
 
     return prediction
