@@ -56,8 +56,9 @@ async def hello():
     return {'res': 'pong', 'version': __version__, "time": time()}
 
 
-@app.get('/prediction')
-async def get_prediction():
+@app.get("/prediction/{username}", response_model=str)
+async def get_prediction(username: str = None):
+    print('username', username)
     prediction = random.choice(predictions)
     return {'prediction': prediction}
 
