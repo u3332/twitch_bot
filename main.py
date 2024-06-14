@@ -4,7 +4,7 @@ import random
 from datetime import datetime, timedelta
 from contextlib import asynccontextmanager
 from urllib.parse import unquote
-from typing import Optional
+import unidecode
 
 
 from fastapi.middleware.cors import CORSMiddleware
@@ -62,18 +62,22 @@ async def hello():
 @app.get("/prediction/{call_string}", response_model=str)
 async def get_prediction(call_string: str):
     # Split the call_string by the delimiter (e.g., '/')
-    parts = call_string.split('|')
+    print('call_string', call_string)
+    parts = [unidecode.unidecode(i).strip() for i in call_string.split(',')]
 
     # Extract caller and callee
     caller = parts[0]
-    callee = parts[1] if len(parts) > 1 else caller
+    callee = unquote(parts[1]) if len(parts) > 1 else caller
+
+    print('[1] Caller:', caller)
+    print('[1] Callee:', callee)
 
     # Validate callee
     if not callee.isprintable() or not callee.strip() or callee.lower() == 'null' or callee == ' ':
         callee = caller
 
-    print('Caller:', caller)
-    print('Callee:', callee)
+    print('[2] Caller:', caller)
+    print('[2] Callee:', callee)
 
     if caller == callee:
         # Same person is calling
