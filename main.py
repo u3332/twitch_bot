@@ -65,9 +65,16 @@ async def hello():
 
 @app.get("/prediction", response_model=str)
 async def get_prediction(user: str, touser: str):
-    user, touser = unidecode(unquote(user.strip())).strip(), unidecode(unquote(touser.strip())).strip()
-    if not touser or touser == '' or touser.isspace():
-        touser = user[:]
+    # Decode and strip the inputs
+    user = unquote(user).strip()
+    touser = unquote(touser).strip()
+
+    # Ensure touser is not empty or whitespace-only
+    if not touser or touser.isspace() or touser == '':
+        touser = user
+
+    logger.info('Processed caller: %s', user)
+    logger.info('Processed callee: %s', touser)
 
     if user == touser:
         # Same person is calling
