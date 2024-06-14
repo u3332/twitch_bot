@@ -59,15 +59,11 @@ async def hello():
     return {'res': 'pong', 'version': __version__, "time": time()}
 
 
-@app.get("/prediction/{call_string}", response_model=str)
-async def get_prediction(call_string: str):
-    # Split the call_string by the delimiter (e.g., '/')
-    print('call_string', call_string)
-    parts = [unidecode.unidecode(i).strip() for i in call_string.split(',')]
-
-    # Extract caller and callee
-    caller = parts[0]
-    callee = unquote(parts[1]) if len(parts) > 1 else caller
+@app.get("/prediction", response_model=str)
+async def get_prediction(user: str, touser: str):
+    # Process user and touser
+    caller = unidecode.unidecode(user).strip()
+    callee = unidecode.unidecode(unquote(touser)).strip()
 
     print('[1] Caller:', caller)
     print('[1] Callee:', callee)
