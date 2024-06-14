@@ -67,16 +67,20 @@ async def get_prediction(user: str, touser: str):
     logger.info('Raw user: %s', user)
     logger.info('Raw touser: %s', touser)
 
-    # Process user and touser
+    # Process user and touser to be ASCII only
     caller = unidecode(user).strip()
     callee = unidecode(unquote(touser)).strip()
 
     logger.info('Processed caller: %s', caller)
     logger.info('Processed callee: %s', callee)
 
-    # Validate callee
-    if not callee or not callee.isprintable() or callee.lower() == 'null' or callee.isspace():
-        logger.info('Invalid callee detected, setting callee to caller')
+    # Validate callee with ASCII check
+    if (not callee or
+        not callee.isprintable() or
+        callee.lower() == 'null' or
+        callee.isspace() or
+        not all(ord(char) < 128 for char in callee)):
+        logger.info('Invalid callee detected (non-ASCII or empty), setting callee to caller')
         callee = caller
 
     logger.info('Final caller: %s', caller)
