@@ -64,7 +64,7 @@ async def hello():
 
 
 @app.get("/prediction", response_model=str)
-async def get_prediction(user: str, touser: str):
+async def get_prediction(user: str, touser: str = None):
     # Decode and strip the inputs
     user = unquote(user).strip()
     touser = unquote(touser).strip()
