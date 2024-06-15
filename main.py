@@ -67,10 +67,13 @@ async def hello():
 async def get_prediction(user: str, touser: str = None):
     # Decode and strip the inputs
     user = unquote(user).strip()
-    touser = unquote(touser).strip()
+    if touser is not None:
+        touser = unquote(touser).strip()
+    else:
+        touser = ''
 
-    # Ensure touser is not empty or whitespace-only
-    if not touser or touser.isspace() or touser == '':
+    # Ensure touser is not empty, whitespace-only, or does not start with "@"
+    if not touser or touser.isspace() or touser == '' or not touser.startswith('@'):
         touser = user
 
     logger.info('Processed caller: %s', user)
